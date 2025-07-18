@@ -14,20 +14,8 @@ This application allows real estate professionals to upload MLS comparable data,
 - Dynamic comp analysis and adjusted price range
 - (Coming soon) DOCX report generation
 
-## 📁 File Structure
-
-- `main.py` — Streamlit app entry point
-- `market_adjustment_schema.json` — Dynamic pricing and logic schema
-- `README.md` — Project overview
-
 ## ▶️ To Run
 
 ```bash
 streamlit run main.py
 ```
-
-## 🔧 Requirements
-
-- Python 3.9+
-- pandas
-- streamlit
