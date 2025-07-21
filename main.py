@@ -66,9 +66,7 @@ basement_unfinished_rate = selected_tier["basement"] if isinstance(selected_tier
 # Process MLS data and generate report
 if mls_file:
     df = pd.read_csv(mls_file) if mls_file.name.endswith("csv") else pd.read_excel(mls_file)
-    st.subheader("📊 Raw MLS Data Preview")
-    st.dataframe(df.head())
-
+    
     # Filter AG SF comps within 85–110%
     ag_low, ag_high = subject_info["sqft"] * 0.85, subject_info["sqft"] * 1.10
     filtered = df[(df["Above Grade Finished Area"] >= ag_low) & (df["Above Grade Finished Area"] <= ag_high)].copy()

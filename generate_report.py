@@ -23,7 +23,16 @@ def generate_report(df, subject_info, zillow_val=None, redfin_val=None, pdf_text
             if not address.strip():
                 address = row.get("Street Address", row.get("Address", row.get("Property Address", "N/A")))
 
+            
             comps.append({
+                "Address": address,
+                "AG SF": ag_sf,
+                "Close Price": close_price,
+                "Total Adj": adj,
+                "Adjusted Price": round(adjusted_price),
+                "Adjusted PPSF": round(ppsf, 2)
+            })
+
                 "Address": row.get("Street Address", row.get("Address", "N/A")),
                 "Close Price": close_price,
                 "Concessions": concessions,
