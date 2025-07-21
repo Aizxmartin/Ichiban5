@@ -33,7 +33,7 @@ def generate_report(df, subject_info, zillow_val=None, redfin_val=None, pdf_text
                 "Adjusted PPSF": round(ppsf, 2)
             })
         except Exception as e:
-            st.warning(f"[Row skipped] Adjustment error: {e}")
+st.warning(f"[Row skipped] Adjustment error: {e}")
             continue
 
     doc = Document()
