@@ -1,4 +1,3 @@
-
 import streamlit as st
 import pandas as pd
 import json
@@ -32,12 +31,14 @@ with col2:
 
 # PDF Parsing
 real_avm = ""
+pdf_text = ""
 if uploaded_pdf and st.button("Extract AVM from PDF"):
     try:
         reader = PdfReader(uploaded_pdf)
         text = ""
         for page in reader.pages:
             text += page.extract_text()
+        pdf_text = text
         for line in text.split("\n"):
             if "RealAVM" in line:
                 real_avm = line.strip()
@@ -59,15 +60,27 @@ for tier in price_tiers:
         selected_tier = tier
         break
 
-ag_rate = selected_tier["aboveGrade"][0] if isinstance(selected_tier["aboveGrade"], list) else selected_tier["aboveGrade"]
-basement_finished_rate = selected_tier["basementFinished"][0] if isinstance(selected_tier["basementFinished"], list) else selected_tier["basementFinished"]
-basement_unfinished_rate = selected_tier["basement"] if isinstance(selected_tier["basement"], int) else selected_tier["basement"][0]
+# Calculate subject value estimate
+value_sources = []
+if subject_info.get("price", 0) > 0:
+    value_sources.append(subject_info["price"])
+try:
+    if real_avm:
+        real_avm_value = float("".join(filter(str.isdigit, real_avm)))
+        value_sources.append(real_avm_value)
+except:
+    pass
+if subject_info.get("zestimate", 0) > 0:
+    value_sources.append(subject_info["zestimate"])
+if subject_info.get("redfin", 0) > 0:
+    value_sources.append(subject_info["redfin"])
+if value_sources:
+    subject_info["final_estimate"] = round(sum(value_sources) / len(value_sources))
+    st.info(f"📌 Averaged Subject Value: ${subject_info['final_estimate']:,}")
 
-# Process MLS data and generate report
+# Load and filter MLS data
 if mls_file:
     df = pd.read_csv(mls_file) if mls_file.name.endswith("csv") else pd.read_excel(mls_file)
-    
-    # Filter AG SF comps within 85–110%
     ag_low, ag_high = subject_info["sqft"] * 0.85, subject_info["sqft"] * 1.10
     filtered = df[(df["Above Grade Finished Area"] >= ag_low) & (df["Above Grade Finished Area"] <= ag_high)].copy()
 
@@ -75,31 +88,9 @@ if mls_file:
         st.warning("No comps found within AG SF range.")
     else:
         st.success(f"{len(filtered)} comps found within AG SF range.")
-
-        
-        # Determine subject value using available sources
-        value_sources = []
-        if subject_info.get("price", 0) > 0:
-            value_sources.append(subject_info["price"])
-        if real_avm:
-            try:
-                real_avm_value = float(''.join(filter(str.isdigit, real_avm)))
-                value_sources.append(real_avm_value)
-            except:
-                pass
-        if subject_info.get("zestimate", 0) > 0:
-            value_sources.append(subject_info["zestimate"])
-        if subject_info.get("redfin", 0) > 0:
-            value_sources.append(subject_info["redfin"])
-        if value_sources:
-            subject_info["final_estimate"] = round(sum(value_sources) / len(value_sources))
-            st.info(f"📌 Averaged Subject Value: ${subject_info['final_estimate']:,}")
-        else:
-            st.warning("⚠️ No subject value inputs provided to calculate average.")
-
         if st.button("Generate Report", type="primary"):
             try:
-                report_path = generate_report(filtered, subject_info)
+                report_path = generate_report(filtered, subject_info, subject_info.get("zestimate"), subject_info.get("redfin"), pdf_text, real_avm)
                 with open(report_path, "rb") as file:
                     st.download_button("Download Report", file, file_name="MarketValuationReport.docx")
             except Exception as e:
