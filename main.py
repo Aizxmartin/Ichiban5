@@ -100,7 +100,7 @@ if mls_file:
 
         if st.button("Generate Report", type="primary"):
             try:
-                report_path = generate_report(subject_info, filtered)
+                report_path = generate_report(filtered, subject_info)
                 with open(report_path, "rb") as file:
                     st.download_button("Download Report", file, file_name="MarketValuationReport.docx")
             except Exception as e:
