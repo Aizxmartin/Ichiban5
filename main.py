@@ -77,6 +77,27 @@ if mls_file:
     else:
         st.success(f"{len(filtered)} comps found within AG SF range.")
 
+        
+        # Determine subject value using available sources
+        value_sources = []
+        if subject_info.get("price", 0) > 0:
+            value_sources.append(subject_info["price"])
+        if real_avm:
+            try:
+                real_avm_value = float(''.join(filter(str.isdigit, real_avm)))
+                value_sources.append(real_avm_value)
+            except:
+                pass
+        if subject_info.get("zestimate", 0) > 0:
+            value_sources.append(subject_info["zestimate"])
+        if subject_info.get("redfin", 0) > 0:
+            value_sources.append(subject_info["redfin"])
+        if value_sources:
+            subject_info["final_estimate"] = round(sum(value_sources) / len(value_sources))
+            st.info(f"📌 Averaged Subject Value: ${subject_info['final_estimate']:,}")
+        else:
+            st.warning("⚠️ No subject value inputs provided to calculate average.")
+
         if st.button("Generate Report", type="primary"):
             try:
                 report_path = generate_report(subject_info, filtered)
