@@ -1,13 +1,17 @@
-
-def calculate_adjustments(subject_info, row):
-    # Stub logic: simple AG SF difference adjustment
-    subject_sqft = subject_info.get("sqft", 0)
+def calculate_adjustments(row, subject_info, schema):
     try:
-        comp_sqft = int(row.get("Above Grade Finished Area", 0))
-    except (ValueError, TypeError):
-        return None, None, None
+        ag_sf = float(row.get("Above Grade Finished Area", 0))
+        subj_sf = float(subject_info.get("Above Grade Finished Area", 0))
+        close_price = float(row.get("Close Price", 0))
+        concessions = float(row.get("Concessions", 0))
 
-    ag_diff = comp_sqft - subject_sqft
-    ag_adj_rate = 40  # $/sf
-    total_adj = -ag_diff * ag_adj_rate
-    return total_adj, ag_adj_rate, ag_diff
+        ag_diff = ag_sf - subj_sf
+        ag_rate = schema["above_grade"]["rate"]
+        ag_adj = ag_diff * ag_rate
+
+        total_adj = ag_adj
+        adjusted_price = close_price + concessions + total_adj
+
+        return total_adj, adjusted_price, ag_diff
+    except Exception:
+        return None, None, None

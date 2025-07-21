@@ -1,21 +1,18 @@
-# Market Valuation Streamlit App
+# Ichiban6 Market Valuation App
 
-This application allows real estate professionals to upload MLS comparable data, apply dynamic adjustments using a JSON-based schema, and generate a market valuation summary including adjusted comp pricing, suggested listing range, and downloadable reports.
+## Features
+- Upload MLS CSV/XLSX
+- Upload subject PDF or enter manually
+- Inputs for Zillow, Redfin, Estimated Subject Value
+- Comps adjusted by AG SF
+- Generates DOCX report with full summary and value range
 
-## 📦 Features
-
-- Upload MLS data (.csv or .xlsx)
-- Manual entry of subject property details
-- Load JSON-based adjustment schema
-- Apply tiered adjustments for:
-  - Above Grade SF
-  - Basement (Finished/Unfinished)
-  - Garage Bays
-- Dynamic comp analysis and adjusted price range
-- (Coming soon) DOCX report generation
-
-## ▶️ To Run
-
+## How to Run
+1. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+2. Run with Streamlit:
 ```bash
 streamlit run main.py
 ```

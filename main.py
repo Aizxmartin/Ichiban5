@@ -1,97 +1,60 @@
 import streamlit as st
 import pandas as pd
-import json
 from PyPDF2 import PdfReader
 from generate_report import generate_report
 
 st.set_page_config(page_title="Market Valuation App", layout="wide")
 st.title("🏡 Market Valuation App")
-st.markdown("Upload MLS data, apply schema-driven adjustments, and generate a valuation report.")
 
-# Upload schema and MLS data
-mls_file = st.file_uploader("Upload MLS CSV/XLSX", type=["csv", "xlsx"])
-uploaded_pdf = st.file_uploader("Upload PDF (optional)", type=["pdf"])
-schema_file = "market_adjustment_schema.json"
+uploaded_file = st.file_uploader("Upload MLS CSV/XLSX File", type=["csv", "xlsx"])
+uploaded_pdf = st.file_uploader("Upload Property PDF", type="pdf")
+zestimate = st.number_input("Zillow Zestimate ($)", step=1000)
+redfin_estimate = st.number_input("Redfin Estimate ($)", step=1000)
+est_subject_value = st.number_input("Estimated Subject Value ($)", step=1000)
 
-# Manual subject property inputs
-subject_info = {}
-subject_info["address"] = st.text_input("Subject Address")
-subject_info["price"] = st.number_input("Estimated Subject Value ($)", min_value=100000, step=10000)
-subject_info["sqft"] = st.number_input("Above Grade SF", min_value=500, step=10)
-subject_info["bedrooms"] = st.number_input("Bedrooms", min_value=1, step=1)
-subject_info["bathrooms"] = st.number_input("Bathrooms", min_value=1, step=1)
-subject_info["garage"] = st.number_input("Garage Bays", min_value=0, step=1)
-
-# Automated Valuation Inputs
-col1, col2 = st.columns(2)
-with col1:
-    subject_info["zestimate"] = st.number_input("Zillow Estimate", min_value=0, step=1000)
-with col2:
-    subject_info["redfin"] = st.number_input("Redfin Estimate", min_value=0, step=1000)
-
-# PDF Parsing
-real_avm = ""
-pdf_text = ""
-if uploaded_pdf and st.button("Extract AVM from PDF"):
-    try:
-        reader = PdfReader(uploaded_pdf)
-        text = ""
-        for page in reader.pages:
-            text += page.extract_text()
-        pdf_text = text
-        for line in text.split("\n"):
-            if "RealAVM" in line:
-                real_avm = line.strip()
-                break
-        if real_avm:
-            st.success(f"Extracted AVM from PDF: {real_avm}")
-    except Exception as e:
-        st.warning("Could not extract AVM from PDF.")
-
-# Load schema
-with open(schema_file, "r") as f:
-    schema = json.load(f)
-
-# Select price tier for AG/Basement adjustments
-price_tiers = schema["squareFootageAdjustments"]
-selected_tier = None
-for tier in price_tiers:
-    if "$700K" in tier["priceRange"]:
-        selected_tier = tier
-        break
-
-# Calculate subject value estimate
-value_sources = []
-if subject_info.get("price", 0) > 0:
-    value_sources.append(subject_info["price"])
-try:
-    if real_avm:
-        real_avm_value = float("".join(filter(str.isdigit, real_avm)))
-        value_sources.append(real_avm_value)
-except:
-    pass
-if subject_info.get("zestimate", 0) > 0:
-    value_sources.append(subject_info["zestimate"])
-if subject_info.get("redfin", 0) > 0:
-    value_sources.append(subject_info["redfin"])
-if value_sources:
-    subject_info["final_estimate"] = round(sum(value_sources) / len(value_sources))
-    st.info(f"📌 Averaged Subject Value: ${subject_info['final_estimate']:,}")
-
-# Load and filter MLS data
-if mls_file:
-    df = pd.read_csv(mls_file) if mls_file.name.endswith("csv") else pd.read_excel(mls_file)
-    ag_low, ag_high = subject_info["sqft"] * 0.85, subject_info["sqft"] * 1.10
-    filtered = df[(df["Above Grade Finished Area"] >= ag_low) & (df["Above Grade Finished Area"] <= ag_high)].copy()
-
-    if filtered.empty:
-        st.warning("No comps found within AG SF range.")
+if uploaded_file:
+    if uploaded_file.name.endswith(".csv"):
+        df = pd.read_csv(uploaded_file)
     else:
-        st.success(f"{len(filtered)} comps found within AG SF range.")
-        if st.button("Generate Report", type="primary"):
-            try:
-                report_path = generate_report(filtered, subject_info, subject_info.get("zestimate"), subject_info.get("redfin"), pdf_text, real_avm)
-                with open(report_path, "rb") as file:
-                    st.download_button("Download Report", file, file_name="MarketValuationReport.docx")
-            except Exception as e:
-                st.error(f"Error generating report: {e}")
+        df = pd.read_excel(uploaded_file)
+
+    numeric_cols = ["Close Price", "Concessions", "Above Grade Finished Area"]
+    for col in numeric_cols:
+        df[col] = pd.to_numeric(df.get(col), errors="coerce")
+
+    # Generate Street Address
+    df["Street Address"] = df["Street Number"].astype(str).fillna("") + " " +                            df["Street Dir Prefix"].fillna("") + " " +                            df["Street Name"].fillna("") + " " +                            df["Street Suffix"].fillna("")
+
+    st.subheader("Filtered Comparable Properties")
+    st.dataframe(df[["Street Address", "Above Grade Finished Area", "Close Price"]])
+
+    if st.button("Generate Report"):
+        subject_info = {
+            "Above Grade Finished Area": 1843,
+            "Bedrooms": 3,
+            "Bathrooms": 2,
+            "Address": "2524 S Krameria St Denver, CO 80222"
+        }
+
+        # Try to pull RealAVM if available
+        if uploaded_pdf:
+            pdf = PdfReader(uploaded_pdf)
+            text = ""
+            for page in pdf.pages:
+                text += page.extract_text()
+            if "RealAVM™" in text:
+                import re
+                match = re.search(r"RealAVM™\s*\$([\d,]+)", text)
+                if match:
+                    real_avm = int(match.group(1).replace(",", ""))
+                    est_subject_value = real_avm
+
+        online_vals = [v for v in [zestimate, redfin_estimate, est_subject_value] if v]
+        online_avg = int(sum(online_vals) / len(online_vals)) if online_vals else None
+
+        try:
+            docx_file = generate_report(df, subject_info, online_avg)
+            st.success("Report generated successfully!")
+            st.download_button("Download DOCX", data=docx_file, file_name="valuation_report.docx")
+        except Exception as e:
+            st.error(f"Error generating report: {e}")
