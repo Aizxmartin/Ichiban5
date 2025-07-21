@@ -13,6 +13,16 @@ def generate_report(df, subject_info, zillow_val=None, redfin_val=None, pdf_text
             ag_sf = row.get("AG SF", row.get("Above Grade Finished Area", 0))
             adjusted_price = close_price + concessions + adj
             ppsf = adjusted_price / ag_sf if ag_sf > 0 else 0
+            
+            number = row.get("Street Number", "")
+            prefix = row.get("Street Dir Prefix", "")
+            name = row.get("Street Name", "")
+            suffix = row.get("Street Suffix", "")
+            parts = [str(number), str(prefix), str(name), str(suffix)]
+            address = " ".join([p for p in parts if str(p).strip()])
+            if not address.strip():
+                address = row.get("Street Address", row.get("Address", row.get("Property Address", "N/A")))
+
             comps.append({
                 "Address": row.get("Street Address", row.get("Address", "N/A")),
                 "Close Price": close_price,
@@ -33,7 +43,15 @@ def generate_report(df, subject_info, zillow_val=None, redfin_val=None, pdf_text
     doc.add_paragraph("Date: July 17, 2025")
     doc.add_paragraph()
     doc.add_heading("Subject Property", level=1)
-    doc.add_paragraph(f"Address: {subject_info.get('address', 'N/A')}")
+    
+    subject_address = subject_info.get('address', 'N/A')
+    if subject_address == 'N/A' and real_avm:
+        for line in pdf_text.splitlines():
+            if any(word in line.lower() for word in ['st', 'ave', 'dr', 'blvd']) and any(char.isdigit() for char in line):
+                subject_address = line.strip()
+                break
+    doc.add_paragraph(f"Address: {subject_address}")
+
     doc.add_paragraph(f"Above Grade SF: {subject_info.get('sqft', 0):,}")
     doc.add_paragraph(f"Bedrooms: {subject_info.get('bedrooms', 0)}")
     doc.add_paragraph(f"Bathrooms: {subject_info.get('bathrooms', 0)}")

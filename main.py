@@ -16,6 +16,7 @@ schema_file = "market_adjustment_schema.json"
 
 # Manual subject property inputs
 subject_info = {}
+subject_info["address"] = st.text_input("Subject Address")
 subject_info["price"] = st.number_input("Estimated Subject Value ($)", min_value=100000, step=10000)
 subject_info["sqft"] = st.number_input("Above Grade SF", min_value=500, step=10)
 subject_info["bedrooms"] = st.number_input("Bedrooms", min_value=1, step=1)
