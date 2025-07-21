@@ -31,7 +31,7 @@ with col2:
 
 # PDF Parsing
 real_avm = ""
-if uploaded_pdf:
+if uploaded_pdf and st.button("Extract AVM from PDF"):
     try:
         reader = PdfReader(uploaded_pdf)
         text = ""
